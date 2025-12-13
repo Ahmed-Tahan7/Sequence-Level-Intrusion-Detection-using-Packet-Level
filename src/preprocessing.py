@@ -12,23 +12,32 @@ def preprocess_pipeline(files):
     Returns:
         df: preprocessed DataFrame
         scaler: fitted StandardScaler for numeric features
+        numeric_cols: list of numeric columns
+        all_columns: final list of columns (numeric + encoded categorical)
     """
-    # 1️⃣ Load CSVs as strings to avoid mixed-type issues
+    # 1️⃣ Load CSVs
     frames = [pd.read_csv(f, encoding='latin1', dtype=str, low_memory=False) for f in files]
     df = pd.concat(frames, ignore_index=True)
 
-    # 2️⃣ Convert numeric columns to float
-    numeric_cols = df.columns[df.apply(lambda col: col.str.replace('.', '', 1).str.isnumeric().all())].tolist()
-    df[numeric_cols] = df[numeric_cols].apply(pd.to_numeric, errors='coerce')
+    # 2️⃣ Convert numeric columns
+    numeric_cols = []
+    for col in df.columns:
+        try:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+            numeric_cols.append(col)
+        except:
+            continue
 
     # 3️⃣ Scale numeric columns
     scaler = StandardScaler()
-    df[numeric_cols] = scaler.fit_transform(df[numeric_cols])
+    df[numeric_cols] = scaler.fit_transform(df[numeric_cols].fillna(0))
 
     # 4️⃣ Encode categorical columns
     categorical_cols = [c for c in df.columns if c not in numeric_cols]
     for col in categorical_cols:
-        df[col] = df[col].astype(str)
-        df[col] = LabelEncoder().fit_transform(df[col])
+        df[col] = LabelEncoder().fit_transform(df[col].astype(str))
 
-    return df, scaler
+    all_columns = numeric_cols + categorical_cols
+    df = df[all_columns]  # ensure consistent order
+
+    return df, scaler, numeric_cols, all_columns

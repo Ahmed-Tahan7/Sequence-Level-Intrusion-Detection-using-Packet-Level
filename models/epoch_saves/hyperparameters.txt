@@ -1,0 +1,6 @@
+sequence_length: 20
+latent_dim: 64
+batch_size: 64
+epochs: 3
+stride: 10
+n_features: 138
